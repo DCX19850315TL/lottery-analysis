@@ -1,0 +1,102 @@
+# =========================================================
+# 双色球预测分析系统 — 统一配置（唯一配置源）
+# 加载方式：src/lottery/common/config.py 的 get_config()
+# 禁止在代码中硬编码任何常量、路径、超参数或风险阈值。
+#
+# 风险声明：本系统为历史数据统计与算法教学演示系统。双色球每期开奖为
+# 独立随机事件，历史结果与未来开奖无因果关系。所有 AI/ML 模型仅做历史
+# 数据拟合，无法提升中奖概率。覆盖设计仅在「已命中若干号码」前提下改善
+# 奖金回收结构，不改变彩票负期望收益本质。
+# =========================================================
+
+project:
+  python_requires: ">=3.10,<3.13"
+  random_seed: 20260101
+  disclaimers:
+    global_banner: >-
+      风险提示：本系统为历史数据统计与算法教学演示系统。双色球每期开奖为独立随机事件，
+      历史结果与未来开奖无因果关系。所有 AI/ML 模型仅做历史数据拟合，无法提升中奖概率；
+      覆盖设计仅改善已命中情形下的奖金回收结构，不改变彩票负期望收益本质。
+    teaching_note: >-
+      教学演示路线：模型输出为历史数据拟合结果，不具备实际预测功能，
+      不得作为投注依据。
+    math_note: >-
+      数学最优路线：选号与覆盖构造完全基于先验理论推导，不使用任何历史开奖数据。
+      「最优」指给定预算下覆盖效率达到或逼近理论下界，不指中奖概率提升。
+
+paths:
+  raw_csv: "data/raw/ssq_history.csv"
+  cache_dir: "data/cache"
+  report_dir: "data/reports"
+  coverage_table: "src/lottery/theory/coverage_tables.py"
+
+lottery:
+  red_min: 1
+  red_max: 33
+  pick_red: 6
+  blue_min: 1
+  blue_max: 16
+  ticket_price: 2.0
+
+crawler:
+  base_url: "https://www.cwl.gov.cn/ygkj/wqkjgg/"
+  page_size: 100
+  timeout_s: 15
+  max_pages: 500
+  rate_limit_qps: 1.0
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) lottery-analysis/0.1 (educational)"
+  retry:
+    max_attempts: 5
+    backoff_s: 2.0
+
+randomness:
+  alpha: 0.05
+  correction: bonferroni          # bonferroni | none
+  test_names:
+    - chi2
+    - ks
+    - runs
+    - autocorr
+    - permutation
+    - geometric
+  autocorr_max_lag: 20
+  permutation_trials: 1000
+
+teaching:
+  window_sizes: [10, 30, 50]
+  default_window: 30
+  train_ratio: 0.8
+  xgb:
+    n_estimators: 300
+    max_depth: 4
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+  lstm:
+    hidden_size: 64
+    num_layers: 2
+    epochs: 50
+    batch_size: 32
+    learning_rate: 0.001
+    dropout: 0.2
+    seq_len: 30
+
+math:
+  default_pool_size: 12
+  default_guarantee: MATCH6_COVER5   # MATCH6_COVER5 | MATCH5_COVER4 | MATCH4_COVER3
+  coverage_algorithm: greedy         # greedy | ilp | table
+  constraint_tolerance: 0.05         # 软分布约束偏离上限，仅用于方差平滑
+  solver_timeout_s: 60
+  blue_joint_cover: false            # 红蓝联合覆盖开关
+
+backtest:
+  window_mode: rolling
+  test_periods: 100
+  monte_carlo_trials: 1000
+
+money:
+  total_budget: 2000.0
+  periods: 100
+  confidence: 0.99
+  stop_loss_ratio: 0.5               # 累计亏损达预算此比例即触发止损

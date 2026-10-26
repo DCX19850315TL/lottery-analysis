@@ -1,0 +1,160 @@
+# ==============================================
+# 注意：本文件每行只能写一个模式！
+# gitignore 用空格不是分隔符 —— `a/ b/ c/` 会被当成"一个名字里带空格的模式"，
+# 永远匹配不到任何东西。2026-10-14 修复：原文件几乎每行都把多个模式挤在一起，
+# 导致规则全部失效（明文 TUSHARE_TOKEN 就是这样经 .claude/settings.json 进的仓库）。
+# ==============================================
+
+# ==============================================
+# AI编程工具专用（最高优先级，直接影响token消耗）
+# ==============================================
+.claude/
+.claudeignore
+# 只忽略根目录下 AI 工具生成的临时架构文件；
+# 不带前导斜杠会匹配任意层级，把 docs/ARCHITECTURE.md 一起挡住。2026-10-26 修复。
+/ARCHITECTURE.md
+.code-review-graph/
+.code-review-graph.json
+.gitnexus/
+.gitnexus.json
+gitnexus-report.md
+.cursor/
+.windsurf/
+.devin/
+.continue/
+.understand-anything/
+.mcp.json
+
+# ==============================================
+# 操作系统与编辑器
+# ==============================================
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+# macOS
+.DS_Store
+._*
+.Trashes
+# Linux
+*~
+*.swp
+*.bak
+.#*
+# VS Code
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+# JetBrains
+.idea/
+*.iml
+out/
+
+# ==============================================
+# 编程语言通用
+# ==============================================
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+.env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# JavaScript/TypeScript
+node_modules/
+npm-debug.log*
+dist/
+.next/
+.nuxt/
+.cache/
+.eslintcache
+.tsbuildinfo
+.vite/
+.turbo/
+# Go
+*.exe
+*.so
+*.dylib
+vendor/
+# Rust
+target/
+Cargo.lock
+
+# ==============================================
+# 构建与部署
+# ==============================================
+build/
+.dockerignore
+docker-compose.override.yml
+.terraform/
+*.tfstate
+*.tfvars
+*.kubeconfig
+secrets/
+keys/
+
+# ==============================================
+# 测试与覆盖率
+# ==============================================
+test-results/
+coverage/
+.nyc_output/
+.coverage
+junit.xml
+test-report.xml
+
+# ==============================================
+# 密钥与敏感信息（本次修复的重点）
+# ==============================================
+*.env
+*.env.local
+*.key
+*.pem
+*.crt
+
+# 500MB+ 数据文件, 超 GitHub 100MB 限制, 仅本地保留
+data/qlib_data/cn_data/klines_ohlcv.json
+data/qlib_data/cn_data/klines_ohlcv.json.bak
+veighna/data/multi_factor/klines.json
+
+# baostock forecast builder checkpoint (transient, not committed)
+data/_forecast_checkpoint.json
+
+# ==============================================
+# 以下模式【故意不启用】—— 不要取消注释
+# ==============================================
+# 原因：data/ 下有 11181 个已跟踪文件、75 个 .pkl 模型，是「数据冻结提交」
+# 工作流的载体。启用后新建的模型/数据文件会被静默忽略，提交需 git add -f。
+# 若将来要收紧，请单独评估后再逐条启用。
+#
+#   *.log            # 日志（与 data/*.log 工作习惯冲突）
+#   *.db *.sqlite *.sql *.dump
+#   *.csv *.tsv *.jsonl *.parquet *.pkl
+#   data/
+#   dataset/ logs/ results/ output/ reports/
+#   catboost_info/
+
+# ==============================================
+# 本地工具产物 (勿提交)
+# ==============================================
+# .codex/config.toml 含明文 TUSHARE_TOKEN, 必须留在本地
+.codex/
+.ua/
+# 空文件, 误操作产物
+cd
+
+# 本地行情缓存 (klines SQLite 缓存, 由 realtime_monitor --sync-klines 生成)
+veighna/data/veighna.db*
+data/realtime/
+catboost_info/
+
+# 晚间链运行时产物（阶段状态/日志/单实例锁，由 scripts/_evening_chain.py 生成）
+data/_evening_chain.log
+data/_evening_chain.lock
+data/_evening_chain_state.json
+# klines JSON 单写者锁（scripts/_update_klines_baostock.py）
+data/klines_ohlcv.json.lock
+data/klines_daily_progress_*.json
