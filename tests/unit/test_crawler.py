@@ -44,6 +44,13 @@ def test_state_error_raises():
         SSQCrawler(get_config().crawler, s).fetch_page(1)
 
 
+def test_non_dict_json_raises_crawl_error():
+    s = FakeSession([FakeResp(200, [])])
+    with pytest.raises(CrawlError):
+        SSQCrawler(get_config().crawler, s).fetch_page(1)
+    assert len(s.calls) == 1
+
+
 def test_retries_then_raises():
     cfg = get_config().crawler.model_copy(deep=True)
     cfg.retry.max_attempts = 2

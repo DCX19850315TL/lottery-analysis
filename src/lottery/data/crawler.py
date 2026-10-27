@@ -61,9 +61,8 @@ class SSQCrawler:
 
     def _load_page(self, page: int) -> list[DrawRecord]:
         """请求并解析一页；解析失败立即包装为 CrawlError。"""
-        payload = self._request_with_retry(page)
         try:
-            return parse_response(payload)
+            return parse_response(self._request_with_retry(page))
         except ParseError as exc:
             raise CrawlError(f"第 {page} 页响应解析失败: {exc}") from exc
 
