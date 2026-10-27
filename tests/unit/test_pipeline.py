@@ -65,6 +65,11 @@ def test_blue_frequencies_counts_only_last_window_draws():
 
 
 def test_recommend_samples_blue_by_window_frequency():
-    draws = [rec(i, (1, 2, 3, 4, 5, 6), 9) for i in range(1, 31)]
-    result = recommend(draws, get_config(), RecommendOptions(5, 12, 30, 42))
+    # softmax 按原始计数计算，窗口 w 时 P(9)=1/(1+15*e^-w)，并非精确为 1；
+    # 取 w=800 让 e^-800 下溢为 0，正确实现下 P(9) 精确为 1，断言不依赖随机性。
+    draws = [
+        DrawRecord(f"2026{i:03d}", date(2026, 1, 1), (1, 2, 3, 4, 5, 6), 9)
+        for i in range(1, 801)
+    ]
+    result = recommend(draws, get_config(), RecommendOptions(5, 12, 800, 42))
     assert {ticket.blue for ticket in result.pool.tickets} == {9}

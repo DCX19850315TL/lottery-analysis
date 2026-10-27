@@ -16,11 +16,12 @@ def test_load_missing_file_returns_empty_frame(tmp_path):
     assert list(df.columns) == COLUMNS and len(df) == 0
 
 
-def test_load_zero_byte_file_raises_storage_error(tmp_path):
+def test_zero_byte_csv_is_treated_as_empty(tmp_path):
     path = tmp_path / "empty.csv"
     path.write_bytes(b"")
-    with pytest.raises(StorageError, match="无法读取"):
-        DrawStorage(path).load()
+    frame = DrawStorage(path).load()
+    assert frame.empty
+    assert list(frame.columns) == COLUMNS
 
 
 def test_load_missing_column_raises_storage_error(tmp_path):

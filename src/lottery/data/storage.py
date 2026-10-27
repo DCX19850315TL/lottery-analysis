@@ -31,12 +31,14 @@ class DrawStorage:
         self.path = path
 
     def load(self) -> pd.DataFrame:
-        """读取全部记录；文件不存在时返回同列空表，文件损坏时抛 StorageError。"""
+        """读取全部记录；文件不存在或为 0 字节时返回同列空表，其他损坏抛 StorageError。"""
         if not self.path.exists():
             return pd.DataFrame(columns=COLUMNS)
         try:
             return pd.read_csv(self.path, dtype={"issue": str})[COLUMNS]
-        except (pd.errors.EmptyDataError, pd.errors.ParserError, KeyError) as exc:
+        except pd.errors.EmptyDataError:
+            return pd.DataFrame(columns=COLUMNS)
+        except (pd.errors.ParserError, KeyError) as exc:
             raise StorageError(f"历史数据文件无法读取: {self.path}") from exc
 
     def append(self, records: Sequence[DrawRecord]) -> int:

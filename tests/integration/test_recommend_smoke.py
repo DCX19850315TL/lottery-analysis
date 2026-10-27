@@ -38,6 +38,11 @@ def _to_frame(records):
     return pd.DataFrame(rows, columns=COLUMNS)
 
 
+def _fake_refresh(self):
+    DrawStorage(self.storage.path).rewrite(_to_frame(_records()))
+    return CleanResult(0, 0, [], True, self.storage.load())
+
+
 def test_offline_recommend_prints_banner_and_tickets(seeded_csv, capsys, monkeypatch):
     monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: seeded_csv)
     code = main(["--offline", "--count", "3", "--window", "20"])
@@ -50,16 +55,35 @@ def test_offline_recommend_prints_banner_and_tickets(seeded_csv, capsys, monkeyp
 def test_default_run_refreshes_when_csv_missing(monkeypatch, tmp_path, capsys):
     path = tmp_path / "ssq_history.csv"
     monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: path)
-
-    def fake_refresh(self):
-        DrawStorage(self.storage.path).rewrite(_to_frame(_records()))
-        return CleanResult(0, 0, [], True, self.storage.load())
-
-    monkeypatch.setattr(DrawRepository, "refresh", fake_refresh)
+    monkeypatch.setattr(DrawRepository, "refresh", _fake_refresh)
     code = main(["--count", "3"])
     assert code == 0
     assert path.exists()
     assert "本次推荐 3 注" in capsys.readouterr().out
+
+
+def test_zero_byte_csv_triggers_refresh(monkeypatch, tmp_path, capsys):
+    path = tmp_path / "ssq_history.csv"
+    path.write_bytes(b"")
+    monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: path)
+    monkeypatch.setattr(DrawRepository, "refresh", _fake_refresh)
+    assert main(["--count", "3"]) == 0
+    assert "本次推荐 3 注" in capsys.readouterr().out
+
+
+def test_zero_byte_csv_offline_fails(monkeypatch, tmp_path, capsys):
+    path = tmp_path / "ssq_history.csv"
+    path.write_bytes(b"")
+    monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: path)
+
+    def fail_refresh(self):
+        raise AssertionError("--offline 不应触发刷新")
+
+    monkeypatch.setattr(DrawRepository, "refresh", fail_refresh)
+    assert main(["--offline"]) == 1
+    err = capsys.readouterr().err
+    assert "没有可用历史数据" in err
+    assert "Traceback" not in err
 
 
 def test_refresh_failure_reports_clean_error(monkeypatch, tmp_path, capsys):
