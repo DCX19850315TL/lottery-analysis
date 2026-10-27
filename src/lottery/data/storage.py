@@ -11,6 +11,10 @@ from lottery.common.types import DrawRecord
 COLUMNS = ["issue", "draw_date", "red1", "red2", "red3", "red4", "red5", "red6", "blue"]
 
 
+class StorageError(RuntimeError):
+    """历史数据文件无法读取。"""
+
+
 def record_to_row(record: DrawRecord) -> dict[str, object]:
     """把一条记录转成 CSV 行，日期存 ISO 字符串，红球展开为 red1..red6。"""
     row: dict[str, object] = {"issue": record.issue, "draw_date": record.draw_date.isoformat()}
@@ -27,10 +31,13 @@ class DrawStorage:
         self.path = path
 
     def load(self) -> pd.DataFrame:
-        """读取全部记录；文件不存在时返回同列空表。"""
+        """读取全部记录；文件不存在时返回同列空表，文件损坏时抛 StorageError。"""
         if not self.path.exists():
             return pd.DataFrame(columns=COLUMNS)
-        return pd.read_csv(self.path, dtype={"issue": str})[COLUMNS]
+        try:
+            return pd.read_csv(self.path, dtype={"issue": str})[COLUMNS]
+        except (pd.errors.EmptyDataError, pd.errors.ParserError, KeyError) as exc:
+            raise StorageError(f"历史数据文件无法读取: {self.path}") from exc
 
     def append(self, records: Sequence[DrawRecord]) -> int:
         """幂等追加新期号记录，按期号升序重写，返回新增行数。"""

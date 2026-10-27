@@ -1,5 +1,6 @@
 """打分、选池与按 seed 可复现地生成投注。"""
 
+from collections import Counter
 from collections.abc import Sequence
 
 import numpy as np
@@ -39,6 +40,16 @@ def select_pool(scores: pd.Series, size: int) -> list[int]:
     """按分数降序选取前 size 个号码，同分时号码小者优先。"""
     ordered = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
     return [int(number) for number, _ in ordered[:size]]
+
+
+def blue_frequencies(draws: Sequence[DrawRecord], window: int) -> pd.Series:
+    """统计最近 window 期蓝球 1..16 的出现次数，返回浮点频数序列。"""
+    recent = list(draws[-window:])
+    counts = Counter(draw.blue for draw in recent)
+    return pd.Series(
+        {number: float(counts[number]) for number in range(BLUE_MIN, BLUE_MAX + 1)},
+        dtype=float,
+    )
 
 
 def _softmax(weights: pd.Series) -> np.ndarray:
@@ -92,7 +103,7 @@ def recommend(
     features = FeatureBuilder().build(draws, options.window)
     scores = red_scores(features, cfg.recommend.freq_weight, cfg.recommend.omission_weight)
     pool = select_pool(scores, options.pool_size)
-    blue_weights = pd.Series(1.0, index=range(BLUE_MIN, BLUE_MAX + 1))
+    blue_weights = blue_frequencies(draws, options.window)
     tickets = TicketSampler(pool, scores, blue_weights).sample(
         options.count, np.random.default_rng(options.seed)
     )

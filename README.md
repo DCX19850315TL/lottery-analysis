@@ -29,21 +29,21 @@ python -m venv .venv
 在项目根目录执行：
 
 ```bash
-# 首次运行：联网刷新历史数据后再生成推荐
-PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5 --refresh
-
-# 之后本地已有数据，可省略 --refresh
+# 首次运行：本地无数据时自动全量采集，然后生成推荐
 PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5
+
+# 强制联网更新历史数据后再生成推荐
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5 --refresh
 ```
 
-首次运行必须加 `--refresh`；后续运行可省略，或用 `--offline` 强制只读本地。
+首次运行无需额外参数：本地 CSV 不存在或为空时会自动联网全量采集。本地已有数据时默认直接读取；`--refresh` 强制增量更新；`--offline` 禁止一切网络，本地无数据时直接报错退出。
 
 输出首先打印风险横幅，随后是最新期号、历史期数与推荐号码。
 
 常用参数：
 
-- `--refresh`：先联网从福彩官网刷新历史数据并写入本地 CSV，再生成推荐。
-- `--offline`：只读本地 CSV，不访问网络；本地无数据时直接报错。
+- `--refresh`：先联网从福彩官网增量刷新历史数据并写入本地 CSV，再生成推荐。
+- `--offline`：禁止一切网络，只读本地 CSV；本地无数据时直接报错。
 - `--count`：推荐注数，默认来自 `config/config.yaml`。
 - `--pool-size`、`--window`、`--seed`：覆盖候选池大小、统计窗口期数与随机种子。
 
@@ -54,5 +54,5 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5
 历史开奖数据存放在 `data/raw/ssq_history.csv`。
 
 - 该路径由 `config/config.yaml` 的 `paths.raw_csv` 指定。
-- `--refresh` 会联网更新此文件；`--offline` 只读取此文件。
+- 默认运行在本地无数据时会自动采集；`--refresh` 会联网更新此文件；`--offline` 只读取此文件。
 - 该目录已被 `.gitignore` 忽略，仓库不提交任何抓取数据。

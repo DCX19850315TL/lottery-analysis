@@ -3,7 +3,7 @@ from datetime import date
 from lottery.common.config import get_config
 from lottery.common.types import DrawRecord, RecommendOptions
 from lottery.teaching.features import FeatureBuilder
-from lottery.teaching.pipeline import TicketSampler, red_scores, select_pool, recommend
+from lottery.teaching.pipeline import TicketSampler, blue_frequencies, red_scores, select_pool, recommend
 
 def rec(i, reds, blue=9): return DrawRecord(f"20260{i:02d}", date(2026, 10, i), reds, blue)
 DRAWS = [rec(1, (1, 2, 3, 4, 5, 6), 9), rec(2, (1, 2, 3, 4, 5, 7), 10),
@@ -53,3 +53,18 @@ def test_negative_scores_do_not_produce_nan():
     sampler = TicketSampler(list(range(1, 34)), s,
                             pd.Series(0.0, index=range(1, 17)))
     assert len(sampler.sample(3, np.random.default_rng(1))) == 3
+
+
+def test_blue_frequencies_counts_only_last_window_draws():
+    f = blue_frequencies(DRAWS, 2)
+    assert list(f.index) == list(range(1, 17))
+    assert f.sum() == 2.0
+    assert f[9] == 1.0 and f[10] == 1.0 and f[1] == 0.0
+    last = blue_frequencies(DRAWS, 1)
+    assert last[9] == 1.0 and last[10] == 0.0
+
+
+def test_recommend_samples_blue_by_window_frequency():
+    draws = [rec(i, (1, 2, 3, 4, 5, 6), 9) for i in range(1, 31)]
+    result = recommend(draws, get_config(), RecommendOptions(5, 12, 30, 42))
+    assert {ticket.blue for ticket in result.pool.tickets} == {9}

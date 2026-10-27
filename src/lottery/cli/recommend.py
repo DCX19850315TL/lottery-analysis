@@ -10,9 +10,10 @@ from lottery.common.constants import PICK_RED, RED_MAX
 from lottery.common.disclaimer import render_banner
 from lottery.common.types import DrawRecord, RecommendOptions, Recommendation, Ticket
 from lottery.data.cleaner import DrawCleaner
-from lottery.data.crawler import SSQCrawler
+from lottery.data.crawler import CrawlError, SSQCrawler
+from lottery.data.parser import ParseError
 from lottery.data.repository import DrawRepository
-from lottery.data.storage import DrawStorage
+from lottery.data.storage import DrawStorage, StorageError
 from lottery.teaching.pipeline import recommend
 
 
@@ -62,10 +63,22 @@ def _build_repository(cfg: AppConfig) -> DrawRepository:
 
 
 def _load_draws(args: argparse.Namespace, repository: DrawRepository) -> list[DrawRecord]:
-    """按参数刷新或只读加载历史数据；--offline 不会触发联网。"""
-    if args.refresh:
+    """按需刷新或只读加载历史数据；--offline 永不联网，本地为空也不采集。"""
+    is_empty = repository.storage.load().empty
+    if args.refresh or (is_empty and not args.offline):
         repository.refresh()
     return repository.all_draws()
+
+
+def _load_draws_or_report(
+    args: argparse.Namespace, repository: DrawRepository
+) -> list[DrawRecord] | None:
+    """加载历史数据；采集、解析或存储失败时打印一行错误并返回 None。"""
+    try:
+        return _load_draws(args, repository)
+    except (CrawlError, ParseError, StorageError) as exc:
+        print(f"数据加载失败: {exc}", file=sys.stderr)
+        return None
 
 
 def _format_ticket(ticket: Ticket) -> str:
@@ -94,7 +107,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _exit_code(exc)
     cfg = get_config()
     render_banner(cfg.project.disclaimers["global_banner"], sys.stdout)
-    draws = _load_draws(args, _build_repository(cfg))
+    draws = _load_draws_or_report(args, _build_repository(cfg))
+    if draws is None:
+        return 1
     if not draws:
         print("没有可用历史数据", file=sys.stderr)
         return 1
