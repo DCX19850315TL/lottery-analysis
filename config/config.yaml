@@ -40,6 +40,7 @@ lottery:
 
 crawler:
   base_url: "https://www.cwl.gov.cn/ygkj/wqkjgg/"
+  api_url: "https://www.cwl.gov.cn/cwl_admin/front/cwlkj/search/kjxx/findDrawNotice"
   page_size: 100
   timeout_s: 15
   max_pages: 500
@@ -100,3 +101,10 @@ money:
   periods: 100
   confidence: 0.99
   stop_loss_ratio: 0.5               # 累计亏损达预算此比例即触发止损
+
+recommend:
+  window: 100
+  pool_size: 12
+  ticket_count: 5
+  freq_weight: 1.0
+  omission_weight: 1.0
