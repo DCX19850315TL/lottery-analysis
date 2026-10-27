@@ -158,3 +158,9 @@ data/_evening_chain_state.json
 # klines JSON 单写者锁（scripts/_update_klines_baostock.py）
 data/klines_ohlcv.json.lock
 data/klines_daily_progress_*.json
+
+# ==============================================
+# 双色球 v1：本地生成数据与 SDD 工作区（可重建）
+# ==============================================
+data/raw/
+.superpowers/
