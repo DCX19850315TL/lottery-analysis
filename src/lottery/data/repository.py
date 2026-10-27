@@ -5,10 +5,11 @@ from datetime import date
 
 import pandas as pd
 
+from lottery.common.constants import PICK_RED
 from lottery.common.types import DrawRecord
 from lottery.data.cleaner import CleanResult, DrawCleaner
 from lottery.data.crawler import SSQCrawler
-from lottery.data.storage import COLUMNS, DrawStorage
+from lottery.data.storage import COLUMNS, DrawStorage, record_to_row
 
 
 class DrawRepository:
@@ -60,22 +61,13 @@ class DrawRepository:
     @staticmethod
     def _to_frame(records: Sequence[DrawRecord]) -> pd.DataFrame:
         """把记录列表转成列顺序为 COLUMNS 的 DataFrame。"""
-        rows = [DrawRepository._to_row(record) for record in records]
+        rows = [record_to_row(record) for record in records]
         return pd.DataFrame(rows, columns=COLUMNS)
-
-    @staticmethod
-    def _to_row(record: DrawRecord) -> dict[str, object]:
-        """把一条记录转成 CSV 行，红球按下标展开为 red1..red6。"""
-        row: dict[str, object] = {"issue": record.issue, "draw_date": record.draw_date.isoformat()}
-        for index, red in enumerate(record.reds, start=1):
-            row[f"red{index}"] = red
-        row["blue"] = record.blue
-        return row
 
     @staticmethod
     def _to_record(row: pd.Series) -> DrawRecord:
         """把清洗后的一行转成 DrawRecord，非法数据交由类型校验报错。"""
-        reds = tuple(int(row[f"red{index}"]) for index in range(1, 7))
+        reds = tuple(int(row[f"red{index}"]) for index in range(1, PICK_RED + 1))
         return DrawRecord(
             str(row["issue"]), date.fromisoformat(row["draw_date"]), reds, int(row["blue"])
         )

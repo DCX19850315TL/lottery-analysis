@@ -11,6 +11,14 @@ from lottery.common.types import DrawRecord
 COLUMNS = ["issue", "draw_date", "red1", "red2", "red3", "red4", "red5", "red6", "blue"]
 
 
+def record_to_row(record: DrawRecord) -> dict[str, object]:
+    """把一条记录转成 CSV 行，日期存 ISO 字符串，红球展开为 red1..red6。"""
+    row: dict[str, object] = {"issue": record.issue, "draw_date": record.draw_date.isoformat()}
+    row.update({f"red{index}": red for index, red in enumerate(record.reds, start=1)})
+    row["blue"] = record.blue
+    return row
+
+
 class DrawStorage:
     """用 CSV 文件持久化开奖记录。"""
 
@@ -56,8 +64,5 @@ class DrawStorage:
 
     @staticmethod
     def _to_row(record: DrawRecord) -> dict[str, object]:
-        """把一条记录转成 CSV 行，日期存 ISO 字符串。"""
-        row: dict[str, object] = {"issue": record.issue, "draw_date": record.draw_date.isoformat()}
-        row.update({f"red{index}": red for index, red in enumerate(record.reds, start=1)})
-        row["blue"] = record.blue
-        return row
+        """把一条记录转成 CSV 行，委托给 record_to_row。"""
+        return record_to_row(record)
