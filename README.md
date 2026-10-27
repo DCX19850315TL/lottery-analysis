@@ -20,7 +20,8 @@ python -m venv .venv
 说明：
 
 - 本项目未以包形式安装，运行命令必须带 `PYTHONPATH=src`。
-- `torch` 为 CPU 版，安装时如遇源问题可追加 `--index-url https://download.pytorch.org/whl/cpu`。
+- 如默认源无法安装 CPU 版 torch，可单独安装 `.venv\Scripts\python.exe -m pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cpu`，再安装其余依赖。
+- 如需运行测试，再安装开发依赖（pytest 等）：`.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt`
 - 运行测试：`.venv\Scripts\python.exe -m pytest -q`（在项目根目录执行）。
 
 ## 运行
@@ -28,8 +29,14 @@ python -m venv .venv
 在项目根目录执行：
 
 ```bash
+# 首次运行：联网刷新历史数据后再生成推荐
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5 --refresh
+
+# 之后本地已有数据，可省略 --refresh
 PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5
 ```
+
+首次运行必须加 `--refresh`；后续运行可省略，或用 `--offline` 强制只读本地。
 
 输出首先打印风险横幅，随后是最新期号、历史期数与推荐号码。
 
