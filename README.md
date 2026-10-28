@@ -36,13 +36,13 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5
 PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5 --refresh
 ```
 
-首次运行无需额外参数：本地 CSV 不存在或为空时会自动联网全量采集。本地已有数据时默认直接读取；`--refresh` 强制增量更新；`--offline` 禁止一切网络，本地无数据时直接报错退出。
+首次运行无需额外参数：本地 CSV 不存在或为空时会自动联网全量采集。本地已有数据时默认直接读取；`--refresh` 强制联网更新（已有数据时只补抓新期号）；`--offline` 禁止一切网络，本地无数据时直接报错退出。
 
 输出首先打印风险横幅，随后是最新期号、历史期数与推荐号码。
 
 常用参数：
 
-- `--refresh`：先联网从福彩官网增量刷新历史数据并写入本地 CSV，再生成推荐。
+- `--refresh`：先联网从福彩官网刷新历史数据并写入本地 CSV，再生成推荐；本地已有数据时只补抓新期号，本地为空时全量采集。
 - `--offline`：禁止一切网络，只读本地 CSV；本地无数据时直接报错。
 - `--count`：推荐注数，默认来自 `config/config.yaml`。
 - `--pool-size`、`--window`、`--seed`：覆盖候选池大小、统计窗口期数与随机种子。
