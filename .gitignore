@@ -101,6 +101,7 @@ keys/
 # ==============================================
 test-results/
 coverage/
+.hypothesis/
 .nyc_output/
 .coverage
 junit.xml
