@@ -33,6 +33,20 @@ def test_load_missing_column_raises_storage_error(tmp_path):
         DrawStorage(path).load()
 
 
+def test_load_non_utf8_file_raises_storage_error(tmp_path):
+    path = tmp_path / "gbk.csv"
+    path.write_bytes(",".join(COLUMNS).encode() + b"\n" + "期号\n".encode("gbk"))
+    with pytest.raises(StorageError, match="无法读取"):
+        DrawStorage(path).load()
+
+
+def test_load_unreadable_path_raises_storage_error(tmp_path):
+    path = tmp_path / "dir.csv"
+    path.mkdir()
+    with pytest.raises(StorageError, match="无法读取"):
+        DrawStorage(path).load()
+
+
 def test_append_is_idempotent(tmp_path):
     s = DrawStorage(tmp_path / "x.csv")
     assert s.append([rec("2026122"), rec("2026121")]) == 2

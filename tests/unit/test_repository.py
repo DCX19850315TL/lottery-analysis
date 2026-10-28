@@ -5,7 +5,7 @@ import pytest
 from lottery.common.types import DrawRecord
 from lottery.data.cleaner import DrawCleaner
 from lottery.data.repository import DrawRepository
-from lottery.data.storage import DrawStorage
+from lottery.data.storage import COLUMNS, DrawStorage, StorageError
 
 
 def rec(i):
@@ -88,3 +88,19 @@ def test_slice_is_inclusive(tmp_path):
     r = repo(tmp_path, FakeCrawler(full=[rec("2026001"), rec("2026002"), rec("2026003")]))
     r.refresh()
     assert [d.issue for d in r.slice("2026002", "2026003")] == ["2026002", "2026003"]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        pytest.param("2026001,2026-10-25,1,2,3,4,5,99,9", id="red-out-of-range"),
+        pytest.param("2026001,,1,2,3,4,5,6,9", id="blank-date"),
+        pytest.param("2026001,2026-10-25,1,2,3,4,5,6,", id="blank-blue"),
+    ],
+)
+def test_all_draws_wraps_invalid_row_as_storage_error(tmp_path, line):
+    path = tmp_path / "x.csv"
+    path.write_text(",".join(COLUMNS) + "\n" + line + "\n", encoding="utf-8")
+    r = DrawRepository(DrawStorage(path), DrawCleaner(), FakeCrawler())
+    with pytest.raises(StorageError, match="2026001"):
+        r.all_draws()

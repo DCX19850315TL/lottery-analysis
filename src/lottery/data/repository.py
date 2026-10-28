@@ -9,7 +9,7 @@ from lottery.common.constants import PICK_RED
 from lottery.common.types import DrawRecord
 from lottery.data.cleaner import CleanResult, DrawCleaner
 from lottery.data.crawler import SSQCrawler
-from lottery.data.storage import COLUMNS, DrawStorage, record_to_row
+from lottery.data.storage import COLUMNS, DrawStorage, StorageError, record_to_row
 
 
 class DrawRepository:
@@ -66,8 +66,14 @@ class DrawRepository:
 
     @staticmethod
     def _to_record(row: pd.Series) -> DrawRecord:
-        """把清洗后的一行转成 DrawRecord，非法数据交由类型校验报错。"""
-        reds = tuple(int(row[f"red{index}"]) for index in range(1, PICK_RED + 1))
-        return DrawRecord(
-            str(row["issue"]), date.fromisoformat(row["draw_date"]), reds, int(row["blue"])
-        )
+        """把清洗后的一行转成 DrawRecord，空值、越界等非法数据抛 StorageError 并带期号。"""
+        try:
+            reds = tuple(int(row[f"red{index}"]) for index in range(1, PICK_RED + 1))
+            return DrawRecord(
+                str(row["issue"]),
+                date.fromisoformat(row["draw_date"]),
+                reds,
+                int(row["blue"]),
+            )
+        except (ValueError, TypeError) as exc:
+            raise StorageError(f"历史数据内容非法（期号 {row['issue']}）: {exc}") from exc

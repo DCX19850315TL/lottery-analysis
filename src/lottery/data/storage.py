@@ -12,7 +12,7 @@ COLUMNS = ["issue", "draw_date", "red1", "red2", "red3", "red4", "red5", "red6",
 
 
 class StorageError(RuntimeError):
-    """历史数据文件无法读取。"""
+    """历史数据文件无法读取或内容非法。"""
 
 
 def record_to_row(record: DrawRecord) -> dict[str, object]:
@@ -38,7 +38,7 @@ class DrawStorage:
             return pd.read_csv(self.path, dtype={"issue": str})[COLUMNS]
         except pd.errors.EmptyDataError:
             return pd.DataFrame(columns=COLUMNS)
-        except (pd.errors.ParserError, KeyError) as exc:
+        except (pd.errors.ParserError, KeyError, UnicodeDecodeError, OSError) as exc:
             raise StorageError(f"历史数据文件无法读取: {self.path}") from exc
 
     def append(self, records: Sequence[DrawRecord]) -> int:

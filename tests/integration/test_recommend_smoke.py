@@ -100,6 +100,23 @@ def test_refresh_failure_reports_clean_error(monkeypatch, tmp_path, capsys):
     assert "Traceback" not in err
 
 
+@pytest.mark.parametrize(
+    "tail",
+    [
+        pytest.param("期号\n".encode("gbk"), id="gbk-encoded"),
+        pytest.param(b"2026001,2026-10-25,1,2,3,4,5,99,9\n", id="red-out-of-range"),
+    ],
+)
+def test_corrupt_csv_reports_single_line_error(monkeypatch, tmp_path, capsys, tail):
+    path = tmp_path / "ssq_history.csv"
+    path.write_bytes(",".join(COLUMNS).encode() + b"\n" + tail)
+    monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: path)
+    assert main(["--offline"]) == 1
+    err = capsys.readouterr().err
+    assert err.startswith("数据加载失败: ")
+    assert len(err.strip().splitlines()) == 1
+
+
 def test_empty_csv_fails(monkeypatch, tmp_path, capsys):
     missing = tmp_path / "none.csv"
     monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: missing)
