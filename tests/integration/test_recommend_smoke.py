@@ -71,9 +71,16 @@ def test_zero_byte_csv_triggers_refresh(monkeypatch, tmp_path, capsys):
     assert "本次推荐 3 注" in capsys.readouterr().out
 
 
-def test_zero_byte_csv_offline_fails(monkeypatch, tmp_path, capsys):
+@pytest.mark.parametrize(
+    "content",
+    [
+        pytest.param(b"", id="zero-byte"),
+        pytest.param(",".join(COLUMNS).encode() + b"\n", id="header-only"),
+    ],
+)
+def test_empty_csv_offline_fails(monkeypatch, tmp_path, capsys, content):
     path = tmp_path / "ssq_history.csv"
-    path.write_bytes(b"")
+    path.write_bytes(content)
     monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: path)
 
     def fail_refresh(self):
@@ -117,7 +124,7 @@ def test_corrupt_csv_reports_single_line_error(monkeypatch, tmp_path, capsys, ta
     assert len(err.strip().splitlines()) == 1
 
 
-def test_empty_csv_fails(monkeypatch, tmp_path, capsys):
+def test_missing_csv_offline_fails(monkeypatch, tmp_path, capsys):
     missing = tmp_path / "none.csv"
     monkeypatch.setattr("lottery.cli.recommend._default_storage_path", lambda: missing)
     assert main(["--offline"]) == 1
