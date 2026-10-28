@@ -1,6 +1,6 @@
 from datetime import date
 import pytest
-from lottery.common.types import DrawRecord, Ticket, TicketPool
+from lottery.common.types import DrawRecord, Ticket
 
 def test_draw_record_accepts_valid():
     d = DrawRecord("2026122", date(2026, 10, 25), (1, 2, 4, 17, 19, 30), 9)

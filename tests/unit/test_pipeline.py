@@ -1,4 +1,6 @@
-import numpy as np, pandas as pd, pytest
+import numpy as np
+import pandas as pd
+import pytest
 from datetime import date
 from lottery.common.config import get_config
 from lottery.common.types import DrawRecord, RecommendOptions
@@ -16,9 +18,10 @@ def test_red_scores_are_zscore_combination():
     f = feats()
     freq = pd.Series({n: f.loc[0, f"freq_{n}"] for n in range(1, 34)}, dtype=float)
     omission = pd.Series({n: f.loc[0, f"omission_{n}"] for n in range(1, 34)}, dtype=float)
-    expected = (freq - freq.mean()) / freq.std(ddof=0) + (omission - omission.mean()) / omission.std(ddof=0)
+    expected = ((freq - freq.mean()) / freq.std(ddof=0)
+                + (omission - omission.mean()) / omission.std(ddof=0))
     s = red_scores(f, 1.0, 1.0)
-    assert s.index.min() == 1 and s.index.max() == 33
+    assert list(s.index) == list(range(1, 34))
     assert s[1] == pytest.approx(expected[1])
 
 def test_select_pool_is_deterministic_on_ties():
@@ -73,3 +76,43 @@ def test_recommend_samples_blue_by_window_frequency():
     ]
     result = recommend(draws, get_config(), RecommendOptions(5, 12, 800, 42))
     assert {ticket.blue for ticket in result.pool.tickets} == {9}
+
+
+@pytest.mark.parametrize("weights, prefix", [((1.0, 0.0), "freq"), ((0.0, 1.0), "omission")])
+def test_red_scores_weights_select_matching_feature(weights, prefix):
+    f = feats()
+    column = pd.Series({n: f.loc[0, f"{prefix}_{n}"] for n in range(1, 34)}, dtype=float)
+    expected = (column - column.mean()) / column.std(ddof=0)
+    pd.testing.assert_series_equal(red_scores(f, *weights), expected, check_names=False)
+
+
+def test_red_scores_constant_feature_contributes_zero():
+    columns = {f"freq_{n}": 4.0 for n in range(1, 34)}
+    columns.update({f"omission_{n}": float(n) for n in range(1, 34)})
+    scores = red_scores(pd.DataFrame([columns]), 1.0, 1.0)
+    std = ((33 ** 2 - 1) / 12) ** 0.5  # 1..33 的总体标准差
+    assert scores.tolist() == pytest.approx([(n - 17) / std for n in range(1, 34)])
+
+
+@pytest.mark.parametrize(
+    "weights, expected_pool",
+    [((1.0, 0.0), list(range(1, 13))), ((0.0, 1.0), list(range(12, 24)))],
+)
+def test_recommend_uses_configured_weights(weights, expected_pool):
+    cfg = get_config()
+    rec_cfg = cfg.recommend.model_copy(
+        update={"freq_weight": weights[0], "omission_weight": weights[1]}
+    )
+    options = RecommendOptions(5, 12, 3, 42)
+    result = recommend(DRAWS, cfg.model_copy(update={"recommend": rec_cfg}), options)
+    assert sorted(result.pool.pool_numbers) == expected_pool
+
+
+def test_sample_raises_when_unique_tickets_are_exhausted():
+    blue = pd.Series(0.0, index=range(1, 17))
+    blue[9] = 800.0  # e^-800 下溢为 0，蓝球只会抽到 9
+    sampler = TicketSampler([1, 2, 3, 4, 5, 6], pd.Series(0.0, index=range(1, 34)), blue)
+    rng = np.random.default_rng(1)
+    assert len(sampler.sample(1, rng)) == 1
+    with pytest.raises(RuntimeError, match="1000"):
+        sampler.sample(2, rng)
