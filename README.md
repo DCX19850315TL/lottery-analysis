@@ -40,6 +40,14 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5 --ref
 
 输出首先打印风险横幅，随后是最新期号、历史期数与推荐号码。
 
+理论路线（全程不读取历史数据）：
+
+```bash
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.theory_report --pool-size 12 --guarantee match6_cover5
+```
+
+输出理论特征分布、六奖级单注概率与「中N保M」覆盖方案；`--algorithm greedy|ilp|table` 选择构造算法，`--seed` 决定号码池。
+
 常用参数：
 
 - `--refresh`：先联网从福彩官网刷新历史数据并写入本地 CSV，再生成推荐；本地已有数据时只补抓新期号，本地为空时全量采集。
