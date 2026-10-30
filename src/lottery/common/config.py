@@ -96,6 +96,27 @@ class MathConfig(BaseModel):
     blue_joint_cover: bool
 
 
+class BacktestConfig(BaseModel):
+    """回测参数：窗口模式、测试期数与蒙特卡洛试验次数。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    window_mode: str
+    test_periods: int
+    monte_carlo_trials: int
+
+
+class MoneyConfig(BaseModel):
+    """资金管理参数：总预算、期数、置信度与止损比例。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    total_budget: float
+    periods: int
+    confidence: float
+    stop_loss_ratio: float
+
+
 class RecommendConfig(BaseModel):
     """推荐参数：历史窗口、候选池大小、注数与评分权重。"""
 
@@ -119,6 +140,8 @@ class AppConfig(BaseModel):
     crawler: CrawlerConfig
     randomness: RandomnessConfig
     math: MathConfig
+    backtest: BacktestConfig
+    money: MoneyConfig
     recommend: RecommendConfig
 
 

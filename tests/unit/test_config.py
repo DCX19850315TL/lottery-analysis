@@ -35,6 +35,21 @@ def test_loads_randomness_section():
     assert cfg.randomness.seed == 20260101
 
 
+def test_loads_backtest_section():
+    cfg = get_config()
+    assert cfg.backtest.window_mode == "rolling"
+    assert cfg.backtest.test_periods == 100
+    assert cfg.backtest.monte_carlo_trials == 1000
+
+
+def test_loads_money_section():
+    cfg = get_config()
+    assert cfg.money.total_budget == 2000.0
+    assert cfg.money.periods == 100
+    assert cfg.money.confidence == 0.99
+    assert cfg.money.stop_loss_ratio == 0.5
+
+
 def test_paths_resolve_under_project_root():
     cfg = get_config()
     assert (PROJECT_ROOT / cfg.paths.raw_csv).parent.name == "raw"
