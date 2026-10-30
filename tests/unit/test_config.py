@@ -18,6 +18,23 @@ def test_loads_math_section():
     assert cfg.math.solver_timeout_s == 60
     assert cfg.math.blue_joint_cover is False
 
+def test_loads_randomness_section():
+    cfg = get_config()
+    assert cfg.randomness.alpha == 0.05
+    assert cfg.randomness.correction == "bonferroni"
+    assert cfg.randomness.test_names == [
+        "chi2",
+        "ks",
+        "runs",
+        "autocorr",
+        "permutation",
+        "geometric",
+    ]
+    assert cfg.randomness.autocorr_max_lag == 20
+    assert cfg.randomness.permutation_trials == 1000
+    assert cfg.randomness.seed == 20260101
+
+
 def test_paths_resolve_under_project_root():
     cfg = get_config()
     assert (PROJECT_ROOT / cfg.paths.raw_csv).parent.name == "raw"

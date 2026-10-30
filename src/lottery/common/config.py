@@ -70,6 +70,19 @@ class CrawlerConfig(BaseModel):
     retry: RetryConfig
 
 
+class RandomnessConfig(BaseModel):
+    """随机性检验参数：显著性水平、校正方式、启用检验与随机种子。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    alpha: float
+    correction: str
+    test_names: list[str]
+    autocorr_max_lag: int
+    permutation_trials: int
+    seed: int
+
+
 class MathConfig(BaseModel):
     """数学路线参数：号码池规模、覆盖等级、构造算法与约束容差。"""
 
@@ -104,6 +117,7 @@ class AppConfig(BaseModel):
     paths: PathsConfig
     lottery: LotteryConfig
     crawler: CrawlerConfig
+    randomness: RandomnessConfig
     math: MathConfig
     recommend: RecommendConfig
 

@@ -53,6 +53,7 @@ crawler:
 randomness:
   alpha: 0.05
   correction: bonferroni          # bonferroni | none
+  seed: 20260101                  # 置换检验的可复现随机种子
   test_names:
     - chi2
     - ks
