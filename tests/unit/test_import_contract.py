@@ -8,6 +8,7 @@ ROUTES = {
     "theory": ("lottery.data", "lottery.teaching", "lottery.randomness"),
     "teaching": ("lottery.theory", "lottery.randomness"),
     "randomness": ("lottery.theory", "lottery.teaching"),
+    "money": ("lottery.data", "lottery.teaching", "lottery.backtest"),
 }
 
 
