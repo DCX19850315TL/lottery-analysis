@@ -94,3 +94,14 @@ class RecommendOptions:
     pool_size: int
     window: int
     seed: int
+
+
+@dataclass(frozen=True)
+class MathOptions:
+    """数学路线参数：覆盖号码池规模、覆盖等级、构造算法与随机种子。"""
+
+    pool_size: int
+    guarantee: str
+    algorithm: str
+    seed: int
+    time_limit_s: float

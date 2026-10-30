@@ -70,6 +70,19 @@ class CrawlerConfig(BaseModel):
     retry: RetryConfig
 
 
+class MathConfig(BaseModel):
+    """数学路线参数：号码池规模、覆盖等级、构造算法与约束容差。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    default_pool_size: int
+    default_guarantee: str
+    coverage_algorithm: str
+    constraint_tolerance: float
+    solver_timeout_s: float
+    blue_joint_cover: bool
+
+
 class RecommendConfig(BaseModel):
     """推荐参数：历史窗口、候选池大小、注数与评分权重。"""
 
@@ -91,6 +104,7 @@ class AppConfig(BaseModel):
     paths: PathsConfig
     lottery: LotteryConfig
     crawler: CrawlerConfig
+    math: MathConfig
     recommend: RecommendConfig
 
 

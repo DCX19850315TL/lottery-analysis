@@ -9,6 +9,15 @@ def test_loads_project_config():
     assert cfg.recommend.ticket_count == 5
     assert cfg.crawler.api_url.startswith("https://www.cwl.gov.cn/")
 
+def test_loads_math_section():
+    cfg = get_config()
+    assert cfg.math.default_pool_size == 12
+    assert cfg.math.default_guarantee == "MATCH6_COVER5"
+    assert cfg.math.coverage_algorithm == "greedy"
+    assert cfg.math.constraint_tolerance == 0.05
+    assert cfg.math.solver_timeout_s == 60
+    assert cfg.math.blue_joint_cover is False
+
 def test_paths_resolve_under_project_root():
     cfg = get_config()
     assert (PROJECT_ROOT / cfg.paths.raw_csv).parent.name == "raw"
