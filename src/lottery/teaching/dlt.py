@@ -3,12 +3,13 @@
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
+from math import comb
 
 import numpy as np
 import pandas as pd
 
 from lottery.data.sporttery import SportsDraw
-from lottery.teaching.pipeline import select_pool
+from lottery.teaching.scoring import select_pool, softmax, zscore
 
 FRONT_MIN, FRONT_MAX, PICK_FRONT = 1, 35, 5
 BACK_MIN, BACK_MAX, PICK_BACK = 1, 12, 2
@@ -47,6 +48,10 @@ class DltOptions:
     back_pool_size: int
     window: int
     seed: int
+
+    def __post_init__(self) -> None:
+        """构造时复用范围与组合容量校验。"""
+        _validate_options(self)
 
 
 @dataclass(frozen=True)
@@ -104,19 +109,6 @@ def validate_dlt_draw(draw: SportsDraw) -> None:
     _validate_zone(draw.numbers[BACK_RULE.start : BACK_RULE.stop], BACK_RULE)
 
 
-def _zscore(series: pd.Series) -> pd.Series:
-    """返回 z 分数；标准差为 0 时返回全 0。"""
-    std = series.std(ddof=0)
-    if std == 0:
-        return pd.Series(0.0, index=series.index)
-    return (series - series.mean()) / std
-
-
-def _softmax(weights: pd.Series) -> np.ndarray:
-    """把权重转成和为 1 的概率向量；全零权重得到均匀分布。"""
-    values = np.asarray(weights, dtype=float)
-    exp = np.exp(values - values.max())
-    return exp / exp.sum()
 
 
 class ZoneScorer:
@@ -149,7 +141,7 @@ class ZoneScorer:
             {number: float(self._omission(draws, number, rule)) for number in numbers},
             dtype=float,
         )
-        return self._weights.freq * _zscore(freq) + self._weights.omission * _zscore(omission)
+        return self._weights.freq * zscore(freq) + self._weights.omission * zscore(omission)
 
     def _omission(self, draws: list[SportsDraw], number: int, rule: ZoneRule) -> int:
         """返回号码距窗口末尾的期数；窗口内从未出现时取窗口长度。"""
@@ -166,11 +158,15 @@ class DltSampler:
         """保存候选池并预计算前后区抽样概率。"""
         self._fronts = np.asarray(plan.front_pool, dtype=int)
         self._backs = np.asarray(plan.back_pool, dtype=int)
-        self._front_weights = _softmax(plan.front_scores.loc[list(plan.front_pool)])
-        self._back_weights = _softmax(plan.back_scores.loc[list(plan.back_pool)])
+        self._front_weights = softmax(plan.front_scores.loc[list(plan.front_pool)])
+        self._back_weights = softmax(plan.back_scores.loc[list(plan.back_pool)])
+        self._capacity = comb(len(self._fronts), PICK_FRONT) * comb(len(self._backs), PICK_BACK)
+        self._max_retries = max(1, min(_MAX_RETRIES, self._capacity))
 
     def sample(self, count: int, rng: np.random.Generator) -> tuple[DltTicket, ...]:
-        """生成 count 注互不重复的号码；重抽 1000 次仍重复则抛 RuntimeError。"""
+        """生成 count 注互不重复的号码；超出组合容量时直接报错。"""
+        if count > self._capacity:
+            raise ValueError(f"候选池最多支持 {self._capacity} 注，实际请求 {count} 注")
         tickets: list[DltTicket] = []
         seen: set[DltTicket] = set()
         while len(tickets) < count:
@@ -180,12 +176,12 @@ class DltSampler:
         return tuple(tickets)
 
     def _draw_unique(self, rng: np.random.Generator, seen: set[DltTicket]) -> DltTicket:
-        """抽出一注未出现过的号码，达到重抽上限仍重复时抛 RuntimeError。"""
-        for _ in range(_MAX_RETRIES):
+        """抽出一注未出现过的号码，达到容量感知的重抽上限时抛 RuntimeError。"""
+        for _ in range(self._max_retries):
             ticket = self._draw_one(rng)
             if ticket not in seen:
                 return ticket
-        raise RuntimeError(f"重抽 {_MAX_RETRIES} 次仍未得到不重复的号码")
+        raise RuntimeError(f"重抽 {self._max_retries} 次仍未得到不重复的号码")
 
     def _draw_one(self, rng: np.random.Generator) -> DltTicket:
         """按权重抽 5 个前区号码与 2 个后区号码，分别升序排列。"""
@@ -207,6 +203,11 @@ def _validate_options(options: DltOptions) -> None:
         raise ValueError(f"后区池大小必须在 {PICK_BACK}..{BACK_MAX}")
     if options.window < 1:
         raise ValueError("统计窗口必须 >= 1")
+    capacity = comb(options.front_pool_size, PICK_FRONT) * comb(
+        options.back_pool_size, PICK_BACK
+    )
+    if options.count > capacity:
+        raise ValueError(f"候选池最多支持 {capacity} 注，实际请求 {options.count} 注")
 
 
 def recommend_dlt(
@@ -215,8 +216,10 @@ def recommend_dlt(
     """按历史窗口打分、选池并生成可复现的大乐透推荐。"""
     _validate_options(options)
     front_scores, back_scores = ZoneScorer(options.window, weights).score(draws)
-    front_pool = tuple(select_pool(front_scores, options.front_pool_size))
-    back_pool = tuple(select_pool(back_scores, options.back_pool_size))
+    front_pool = tuple(select_pool(front_scores, options.front_pool_size, options.seed))
+    back_pool = tuple(
+        select_pool(back_scores, options.back_pool_size, options.seed + 1)
+    )
     plan = _DltPlan(front_pool, back_pool, front_scores, back_scores)
     tickets = DltSampler(plan).sample(options.count, np.random.default_rng(options.seed))
     return DltRecommendation(

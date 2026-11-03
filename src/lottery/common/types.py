@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date
+from math import comb
 
 from lottery.common.constants import (
     BLUE_MAX,
@@ -88,12 +89,24 @@ class Recommendation:
 
 @dataclass(frozen=True)
 class RecommendOptions:
-    """推荐参数配置。"""
+    """推荐参数配置；构造时即校验范围与组合容量。"""
 
     count: int
     pool_size: int
     window: int
     seed: int
+
+    def __post_init__(self) -> None:
+        """拒绝非法注数、池大小、窗口与超出容量的注数。"""
+        if self.count < 1:
+            raise ValueError("推荐注数必须 >= 1")
+        if not PICK_RED <= self.pool_size <= RED_MAX:
+            raise ValueError(f"候选池必须在 {PICK_RED}..{RED_MAX}，实际 {self.pool_size}")
+        if self.window < 1:
+            raise ValueError("统计窗口必须 >= 1")
+        capacity = comb(self.pool_size, PICK_RED) * (BLUE_MAX - BLUE_MIN + 1)
+        if self.count > capacity:
+            raise ValueError(f"候选池最多支持 {capacity} 注，实际请求 {self.count} 注")
 
 
 @dataclass(frozen=True)

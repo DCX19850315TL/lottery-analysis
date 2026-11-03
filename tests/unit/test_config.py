@@ -7,6 +7,7 @@ def test_loads_project_config():
     assert cfg.recommend.window == 100
     assert cfg.recommend.pool_size == 12
     assert cfg.recommend.ticket_count == 5
+    assert cfg.recommend.dlt_back_pool_size == 6
     assert cfg.crawler.api_url.startswith("https://www.cwl.gov.cn/")
 
 def test_loads_math_section():

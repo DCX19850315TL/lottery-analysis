@@ -24,3 +24,11 @@ def test_omission_counts_draws_since_last_seen():
 def test_window_limits_history():
     f = FeatureBuilder().build(DRAWS, 1)
     assert f.loc[0, "freq_1"] == 0 and f.loc[0, "freq_8"] == 1
+
+
+def test_blue_features_use_same_frequency_and_omission_semantics():
+    f = FeatureBuilder().build(DRAWS, 10)
+    assert f.loc[0, "blue_freq_9"] == 3
+    assert f.loc[0, "blue_freq_1"] == 0
+    assert f.loc[0, "blue_omission_9"] == 0
+    assert f.loc[0, "blue_omission_1"] == 10

@@ -109,3 +109,17 @@ def test_recommend_dlt_rejects_out_of_range_numbers():
     options = DltOptions(1, 10, 6, 3, 42)
     with pytest.raises(ValueError, match="大乐透"):
         recommend_dlt([broken], options, ScoreWeights(1.0, 1.0))
+
+
+def test_dlt_options_reject_count_over_capacity():
+    with pytest.raises(ValueError, match="1 注"):
+        DltOptions(2, 5, 2, 3, 42)
+
+
+@pytest.mark.parametrize(
+    "values",
+    [(0, 10, 6, 3, 42), (1, 4, 6, 3, 42), (1, 10, 1, 3, 42), (1, 10, 6, 0, 42)],
+)
+def test_dlt_options_reject_invalid_values(values):
+    with pytest.raises(ValueError):
+        DltOptions(*values)

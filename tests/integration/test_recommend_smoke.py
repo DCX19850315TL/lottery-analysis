@@ -133,7 +133,13 @@ def test_missing_csv_offline_fails(monkeypatch, tmp_path, capsys):
 
 @pytest.mark.parametrize(
     "argv",
-    [["--count", "0"], ["--pool-size", "5"], ["--pool-size", "34"], ["--window", "0"]],
+    [
+        ["--count", "0"],
+        ["--pool-size", "5"],
+        ["--pool-size", "34"],
+        ["--window", "0"],
+        ["--count", "17", "--pool-size", "6"],
+    ],
 )
 def test_invalid_args_rejected(argv, capsys):
     assert main(argv) == 2

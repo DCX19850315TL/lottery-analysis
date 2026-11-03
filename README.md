@@ -40,6 +40,8 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5 --ref
 
 输出首先打印风险横幅，随后是最新期号、历史期数与推荐号码。
 
+频率与遗漏都是对历史窗口的描述统计量，不是下一期号码的出现概率，也不预测未来。推荐器把两者标准化后加权选池，并对同一期内已使用的蓝球与红球降权，使注单之间尽量少重复；这只改善号码覆盖结构，不改变中奖概率。
+
 大乐透推荐（体彩，读取 `data/raw/dlt_history.csv`）：
 
 ```bash
@@ -50,7 +52,15 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.dlt_recommend --count 5
 PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.dlt_recommend --count 5 --refresh
 ```
 
-输出风险横幅、玩法名、最新期号、历史期数、注数，以及每注前区 5 个号码与后区 2 个号码。`--front-pool`、`--back-pool`、`--window`、`--seed` 覆盖候选池大小、统计窗口与随机种子；默认前区池 12、后区池 6，其余默认值来自 `config/config.yaml`。`--offline` 与双色球推荐含义相同。
+输出风险横幅、玩法名、最新期号、历史期数、注数，以及每注前区 5 个号码与后区 2 个号码。`--front-pool`、`--back-pool`、`--window`、`--seed` 覆盖候选池大小、统计窗口与随机种子；默认前区池 12、后区池 6，均由 `config/config.yaml` 的 `recommend` 段提供。`--offline` 与双色球推荐含义相同。
+
+大乐透滚动回测：
+
+```bash
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.dlt_backtest --offline --window 100 --test-periods 100 --count 5
+```
+
+只用被预测期之前的数据逐期重跑推荐，输出前区最佳/单注平均命中、后区单注平均命中、理论期望与总投入。当前未配置大乐透奖级奖金，因此不报告奖金与收益率。
 
 理论路线（全程不读取历史数据）：
 

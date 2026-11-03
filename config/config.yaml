@@ -140,5 +140,6 @@ recommend:
   window: 100
   pool_size: 12
   ticket_count: 5
+  dlt_back_pool_size: 6             # 大乐透后区候选池
   freq_weight: 1.0
   omission_weight: 1.0

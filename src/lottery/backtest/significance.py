@@ -20,6 +20,7 @@ class SignificanceResult:
 
     chi2: float
     p_value: float
+    effect_size: float
     is_significant: bool
     conclusion: str
 
@@ -65,14 +66,27 @@ class SignificanceTester:
         expected = _expected_counts(strategy.red_hit_counts, baseline["red_hits"])
         observed, expected = _merge_small_bins(observed, expected)
         chi2, p_value = self._chi_square(observed, expected)
+        effect_size = self._cramers_v(chi2, observed)
         significant = bool(p_value < self._alpha)
         prefix = _SIGNIFICANT if significant else _NOT_SIGNIFICANT
         return SignificanceResult(
             chi2=chi2,
             p_value=p_value,
+            effect_size=effect_size,
             is_significant=significant,
-            conclusion=f"{prefix}（p={p_value:.4f}）",
+            conclusion=f"{prefix}（p={p_value:.4f}，效应量 V={effect_size:.3f}）",
         )
+
+    @staticmethod
+    def _cramers_v(chi2: float, observed: np.ndarray) -> float:
+        """返回 Cramér's V；样本为空或只有一箱时返回 0。"""
+        total = float(observed.sum())
+        bins = len(observed) - 1
+        if total <= 0 or bins <= 0:
+            return 0.0
+        if np.isinf(chi2):
+            return 1.0
+        return float(np.sqrt(chi2 / (total * bins)))
 
     @staticmethod
     def _chi_square(observed: np.ndarray, expected: np.ndarray) -> tuple[float, float]:

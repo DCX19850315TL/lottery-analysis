@@ -29,10 +29,11 @@ class ScoreRules:
 
 @dataclass(frozen=True)
 class PeriodScore:
-    """单期评分结果：最佳红球命中数、蓝球命中注数与当期收支。"""
+    """单期评分结果：最佳红球命中、全部红球命中、蓝球命中与收支。"""
 
     issue: str
     red_hits: int
+    red_hit_total: int
     blue_hits: int
     cost: float
     payout: float
@@ -40,16 +41,21 @@ class PeriodScore:
 
 @dataclass(frozen=True)
 class Metrics:
-    """回测汇总指标。"""
+    """回测汇总指标；红球同时报告单期最佳与单注平均，避免口径混用。"""
 
-    mean_red_hits: float
-    mean_blue_hits: float
+    mean_max_red_hits: float
+    mean_red_hits_per_ticket: float
+    mean_blue_hits_per_ticket: float
     hit_rate: float
-    expected_hits: float
+    expected_red_hits_per_ticket: float
+    expected_red_hits_per_period: float
     max_gap_periods: int
     max_drawdown: float
     total_cost: float
     total_return: float
+    roi: float
+    roi_ci_low: float
+    roi_ci_high: float
 
 
 @dataclass(frozen=True)
@@ -107,6 +113,7 @@ def build_period_score(
     return PeriodScore(
         issue=draw.issue,
         red_hits=max(red_hits for red_hits, _, _ in results),
+        red_hit_total=sum(red_hits for red_hits, _, _ in results),
         blue_hits=sum(blue_hit for _, blue_hit, _ in results),
         cost=len(tickets) * rules.ticket_price,
         payout=_sum_payouts(tickets, draw, rules),
@@ -130,22 +137,46 @@ def _max_gap(scores: Sequence[PeriodScore]) -> int:
     return longest
 
 
+def _roi_interval(scores: Sequence[PeriodScore]) -> tuple[float, float]:
+    """按固定种子对逐期净收益做 bootstrap，返回 95% 收益率区间。"""
+    net = np.array([score.payout - score.cost for score in scores], dtype=float)
+    costs = np.array([score.cost for score in scores], dtype=float)
+    rng = np.random.default_rng(0)
+    picks = rng.integers(0, len(scores), size=(2000, len(scores)))
+    ratios = net[picks].mean(axis=1) / costs[picks].mean(axis=1)
+    low, high = np.quantile(ratios, [0.025, 0.975])
+    return float(low), float(high)
+
+
 def compute_metrics(
     scores: Sequence[PeriodScore], expected_per_ticket: float, n_tickets: int
 ) -> Metrics:
-    """把逐期评分聚合为 8 项指标；空序列直接报错。"""
+    """聚合逐期评分；红球最佳与单注平均分列，收益率附 95% 区间。"""
     if not scores:
         raise ValueError("回测期数不能为空")
     payouts = np.array([score.payout for score in scores])
+    total_cost = float(sum(score.cost for score in scores))
+    total_return = float(payouts.sum())
+    low, high = _roi_interval(scores)
+    periods = len(scores)
     return Metrics(
-        mean_red_hits=float(np.mean([score.red_hits for score in scores])),
-        mean_blue_hits=float(np.mean([score.blue_hits for score in scores])),
+        mean_max_red_hits=float(np.mean([score.red_hits for score in scores])),
+        mean_red_hits_per_ticket=float(
+            sum(score.red_hit_total for score in scores) / (periods * n_tickets)
+        ),
+        mean_blue_hits_per_ticket=float(
+            sum(score.blue_hits for score in scores) / (periods * n_tickets)
+        ),
         hit_rate=float(np.mean(payouts > 0)),
-        expected_hits=expected_per_ticket * n_tickets,
+        expected_red_hits_per_ticket=expected_per_ticket,
+        expected_red_hits_per_period=expected_per_ticket * n_tickets,
         max_gap_periods=_max_gap(scores),
         max_drawdown=_max_drawdown(scores),
-        total_cost=float(sum(score.cost for score in scores)),
-        total_return=float(payouts.sum()),
+        total_cost=total_cost,
+        total_return=total_return,
+        roi=total_return / total_cost - 1.0,
+        roi_ci_low=low,
+        roi_ci_high=high,
     )
 
 
@@ -155,6 +186,7 @@ def _curve_frame(scores: Sequence[PeriodScore]) -> pd.DataFrame:
         {
             "issue": [score.issue for score in scores],
             "red_hits": [score.red_hits for score in scores],
+            "red_hit_total": [score.red_hit_total for score in scores],
             "blue_hits": [score.blue_hits for score in scores],
             "cost": [score.cost for score in scores],
             "payout": [score.payout for score in scores],

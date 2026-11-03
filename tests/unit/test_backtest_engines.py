@@ -37,7 +37,8 @@ def test_math_engine_scores_fixed_plan(make_draws):
     result = engine.run(_plan(), reordered, test_periods=3)
     assert result.metrics.total_cost == pytest.approx(6.0)
     assert result.metrics.total_return == pytest.approx(15_000_000.0)
-    assert result.metrics.mean_red_hits == pytest.approx(6.0)
+    assert result.metrics.mean_max_red_hits == pytest.approx(6.0)
+    assert result.metrics.mean_red_hits_per_ticket == pytest.approx(6.0)
     assert list(result.curve["issue"]) == [draw.issue for draw in reordered[-3:]]
 
 
@@ -84,3 +85,22 @@ def test_monte_carlo_is_reproducible(make_draws):
     assert len(first) == 3 * 20
     assert set(first.columns) >= {"trial", "period", "red_hits", "payout"}
     assert first["trial"].nunique() == 3
+
+
+def test_monte_carlo_pool_baseline_accepts_matching_capacity(make_draws):
+    baseline = MonteCarloBaseline(
+        n_tickets=2,
+        rules=ScoreRules(ticket_price=2.0, payouts=PAYOUTS),
+        pool_size=12,
+    )
+    frame = baseline.run(make_draws(10, seed=9), n_trials=2, seed=7)
+    assert len(frame) == 20
+
+
+def test_monte_carlo_pool_baseline_rejects_impossible_capacity():
+    with pytest.raises(ValueError, match="1 注"):
+        MonteCarloBaseline(
+            n_tickets=2,
+            rules=ScoreRules(ticket_price=2.0, payouts=PAYOUTS),
+            pool_size=6,
+        )

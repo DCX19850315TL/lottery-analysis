@@ -63,7 +63,7 @@ class _Runner:
         result = TeachingBacktestEngine(self.cfg, _score_rules(self.cfg)).run(
             self.draws, "rule", self.args.window, self.args.test_periods
         )
-        return self._compare(result, self.cfg.recommend.ticket_count)
+        return self._compare(result, self.cfg.recommend.ticket_count, self.cfg.recommend.pool_size)
 
     def math(self) -> RouteReport:
         """对固定覆盖方案回测数学路线。"""
@@ -71,14 +71,14 @@ class _Runner:
         result = MathBacktestEngine(_score_rules(self.cfg)).run(
             plan, self.draws, self.args.test_periods
         )
-        return self._compare(result, len(plan.tickets))
+        return self._compare(result, len(plan.tickets), self.args.pool_size)
 
-    def _compare(self, result: BacktestResult, n_tickets: int) -> RouteReport:
-        """在相同区间上跑随机基准并做卡方检验。"""
+    def _compare(self, result: BacktestResult, n_tickets: int, pool_size: int) -> RouteReport:
+        """在相同区间上跑同池随机基准并做卡方检验。"""
         window = list(self.draws[-self.args.test_periods :])
-        baseline = MonteCarloBaseline(n_tickets, _score_rules(self.cfg)).run(
-            window, self.args.trials, self.cfg.project.random_seed
-        )
+        baseline = MonteCarloBaseline(
+            n_tickets, _score_rules(self.cfg), pool_size
+        ).run(window, self.args.trials, self.cfg.project.random_seed)
         return RouteReport(result, SignificanceTester().compare(result, baseline))
 
 
@@ -191,9 +191,20 @@ def _print_report(report: RouteReport) -> None:
     print(f"结论: {report.significance.conclusion}")
     print(f"路线: {report.result.label}")
     print(f"  测试期数: {len(report.result.curve)}")
-    print(f"  平均红球命中: {metrics.mean_red_hits:.3f}  命中率: {metrics.hit_rate:.2%}")
+    print(
+        f"  单期最佳红球命中: {metrics.mean_max_red_hits:.3f}"
+        f"  单注平均: {metrics.mean_red_hits_per_ticket:.3f}"
+    )
+    print(
+        f"  单注期望命中: {metrics.expected_red_hits_per_ticket:.3f}"
+        f"  命中率: {metrics.hit_rate:.2%}"
+    )
     print(f"  最大空窗: {metrics.max_gap_periods} 期  最大回撤: {metrics.max_drawdown:.2f}")
     print(f"  总投入: {metrics.total_cost:.2f}  总回收: {metrics.total_return:.2f}")
+    print(
+        f"  收益率: {metrics.roi:.2%}"
+        f"  95% 区间: [{metrics.roi_ci_low:.2%}, {metrics.roi_ci_high:.2%}]"
+    )
 
 
 def _run_routes(args: argparse.Namespace, draws: Sequence[DrawRecord]) -> None:

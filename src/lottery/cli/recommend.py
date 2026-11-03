@@ -3,10 +3,11 @@
 import argparse
 import sys
 from collections.abc import Sequence
+from math import comb
 from pathlib import Path
 
 from lottery.common.config import PROJECT_ROOT, AppConfig, get_config
-from lottery.common.constants import PICK_RED, RED_MAX
+from lottery.common.constants import BLUE_MAX, BLUE_MIN, PICK_RED, RED_MAX
 from lottery.common.disclaimer import render_banner
 from lottery.common.types import DrawRecord, RecommendOptions, Recommendation, Ticket
 from lottery.data.cleaner import DrawCleaner
@@ -42,6 +43,9 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--count 必须 >= 1")
     if not PICK_RED <= args.pool_size <= RED_MAX:
         parser.error(f"--pool-size 必须在 {PICK_RED}..{RED_MAX}")
+    capacity = comb(args.pool_size, PICK_RED) * (BLUE_MAX - BLUE_MIN + 1)
+    if args.count > capacity:
+        parser.error(f"--count 超过候选池容量 {capacity}")
     if args.window < 1:
         parser.error("--window 必须 >= 1")
 
@@ -114,7 +118,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("没有可用历史数据", file=sys.stderr)
         return 1
     options = RecommendOptions(args.count, args.pool_size, args.window, args.seed)
-    _print_result(recommend(draws, cfg, options))
+    try:
+        result = recommend(draws, cfg, options)
+    except (ValueError, RuntimeError) as exc:
+        print(f"推荐失败: {exc}", file=sys.stderr)
+        return 1
+    _print_result(result)
     return 0
 
 

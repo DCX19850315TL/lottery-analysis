@@ -5,7 +5,14 @@ from datetime import date
 from lottery.common.config import get_config
 from lottery.common.types import DrawRecord, RecommendOptions
 from lottery.teaching.features import FeatureBuilder
-from lottery.teaching.pipeline import TicketSampler, blue_frequencies, red_scores, select_pool, recommend
+from lottery.teaching.pipeline import (
+    TicketSampler,
+    blue_frequencies,
+    blue_scores,
+    red_scores,
+    select_pool,
+    recommend,
+)
 
 def rec(i, reds, blue=9): return DrawRecord(f"20260{i:02d}", date(2026, 10, i), reds, blue)
 DRAWS = [rec(1, (1, 2, 3, 4, 5, 6), 9), rec(2, (1, 2, 3, 4, 5, 7), 10),
@@ -24,18 +31,37 @@ def test_red_scores_are_zscore_combination():
     assert list(s.index) == list(range(1, 34))
     assert s[1] == pytest.approx(expected[1])
 
-def test_select_pool_is_deterministic_on_ties():
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"count": 0, "pool_size": 12, "window": 3, "seed": 42},
+        {"count": 1, "pool_size": 5, "window": 3, "seed": 42},
+        {"count": 1, "pool_size": 34, "window": 3, "seed": 42},
+        {"count": 1, "pool_size": 12, "window": 0, "seed": 42},
+        {"count": 17, "pool_size": 6, "window": 3, "seed": 42},
+    ],
+)
+def test_recommend_options_reject_invalid_values(kwargs):
+    with pytest.raises(ValueError):
+        RecommendOptions(**kwargs)
+
+
+def test_select_pool_breaks_ties_with_seeded_random_order():
     s = pd.Series({i: float(i % 2) for i in range(1, 34)})
-    pool = select_pool(s, 12)
-    assert pool[:2] == [1, 3]   # 同分时号码小的优先
+    first = select_pool(s, 12, 42)
+    assert first == select_pool(s, 12, 42)
+    assert first != select_pool(s, 12, 43)
+    assert set(first) <= {number for number in range(1, 34) if number % 2 == 1}
+    assert first != list(range(1, 24, 2))
 
 def test_tickets_valid_and_counted():
     rng = np.random.default_rng(7)
     s = red_scores(feats(), 1.0, 1.0)
-    pool = select_pool(s, 12)
+    pool = select_pool(s, 12, 7)
     sampler = TicketSampler(pool, s, pd.Series(1.0, index=range(1, 17)))
     tickets = sampler.sample(5, rng)
     assert len(tickets) == 5
+    assert len({ticket.blue for ticket in tickets}) == 5
     for t in tickets:
         assert len(t.reds) == 6 and list(t.reds) == sorted(t.reds)
         assert set(t.reds) <= set(pool) and 1 <= t.blue <= 16
@@ -50,6 +76,14 @@ def test_different_seed_changes_tickets():
     a = recommend(DRAWS, get_config(), RecommendOptions(5, 12, 3, 42))
     b = recommend(DRAWS, get_config(), RecommendOptions(5, 12, 3, 43))
     assert a.pool.tickets != b.pool.tickets
+
+
+def test_five_tickets_cover_entire_pool():
+    result = recommend(DRAWS, get_config(), RecommendOptions(5, 12, 3, 42))
+    tickets = result.pool.tickets
+    assert set().union(*(set(ticket.reds) for ticket in tickets)) == set(
+        result.pool.pool_numbers
+    )
 
 def test_negative_scores_do_not_produce_nan():
     s = pd.Series(np.linspace(-5, -1, 33), index=range(1, 34))
@@ -67,15 +101,33 @@ def test_blue_frequencies_counts_only_last_window_draws():
     assert last[9] == 1.0 and last[10] == 0.0
 
 
-def test_recommend_samples_blue_by_window_frequency():
-    # softmax 按原始计数计算，窗口 w 时 P(9)=1/(1+15*e^-w)，并非精确为 1；
-    # 取 w=800 让 e^-800 下溢为 0，正确实现下 P(9) 精确为 1，断言不依赖随机性。
+@pytest.mark.parametrize(
+    "weights, prefix",
+    [((1.0, 0.0), "blue_freq"), ((0.0, 1.0), "blue_omission")],
+)
+def test_blue_scores_weights_select_matching_feature(weights, prefix):
+    f = feats()
+    column = pd.Series({n: f.loc[0, f"{prefix}_{n}"] for n in range(1, 17)}, dtype=float)
+    expected = (column - column.mean()) / column.std(ddof=0)
+    pd.testing.assert_series_equal(blue_scores(f, *weights), expected, check_names=False)
+
+
+def test_blue_scores_constant_blue_history_is_neutral():
     draws = [
         DrawRecord(f"2026{i:03d}", date(2026, 1, 1), (1, 2, 3, 4, 5, 6), 9)
-        for i in range(1, 801)
+        for i in range(1, 101)
     ]
-    result = recommend(draws, get_config(), RecommendOptions(5, 12, 800, 42))
-    assert {ticket.blue for ticket in result.pool.tickets} == {9}
+    scores = blue_scores(FeatureBuilder().build(draws, 100), 1.0, 1.0)
+    assert scores.tolist() == pytest.approx([0.0] * 16)
+
+
+def test_recommend_allocates_distinct_blues_before_repeating():
+    draws = [
+        DrawRecord(f"2026{i:03d}", date(2026, 1, 1), (1, 2, 3, 4, 5, 6), 9)
+        for i in range(1, 101)
+    ]
+    result = recommend(draws, get_config(), RecommendOptions(5, 12, 100, 42))
+    assert len({ticket.blue for ticket in result.pool.tickets}) == 5
 
 
 @pytest.mark.parametrize("weights, prefix", [((1.0, 0.0), "freq"), ((0.0, 1.0), "omission")])
@@ -95,24 +147,28 @@ def test_red_scores_constant_feature_contributes_zero():
 
 
 @pytest.mark.parametrize(
-    "weights, expected_pool",
-    [((1.0, 0.0), list(range(1, 13))), ((0.0, 1.0), list(range(12, 24)))],
+    "weights, required, allowed",
+    [
+        ((1.0, 0.0), set(range(1, 12)), set(range(1, 34))),
+        ((0.0, 1.0), set(), set(range(12, 34))),
+    ],
 )
-def test_recommend_uses_configured_weights(weights, expected_pool):
+def test_recommend_uses_configured_weights(weights, required, allowed):
     cfg = get_config()
     rec_cfg = cfg.recommend.model_copy(
         update={"freq_weight": weights[0], "omission_weight": weights[1]}
     )
     options = RecommendOptions(5, 12, 3, 42)
     result = recommend(DRAWS, cfg.model_copy(update={"recommend": rec_cfg}), options)
-    assert sorted(result.pool.pool_numbers) == expected_pool
+    pool = set(result.pool.pool_numbers)
+    assert required <= pool <= allowed
+    assert len(pool) == 12
 
 
-def test_sample_raises_when_unique_tickets_are_exhausted():
+def test_sample_uses_blue_capacity_then_rejects_overflow():
     blue = pd.Series(0.0, index=range(1, 17))
-    blue[9] = 800.0  # e^-800 下溢为 0，蓝球只会抽到 9
     sampler = TicketSampler([1, 2, 3, 4, 5, 6], pd.Series(0.0, index=range(1, 34)), blue)
     rng = np.random.default_rng(1)
-    assert len(sampler.sample(1, rng)) == 1
-    with pytest.raises(RuntimeError, match="1000"):
-        sampler.sample(2, rng)
+    assert len(sampler.sample(16, rng)) == 16
+    with pytest.raises(ValueError, match="16"):
+        sampler.sample(17, rng)

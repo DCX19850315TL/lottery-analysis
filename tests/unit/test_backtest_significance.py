@@ -19,14 +19,19 @@ def _baseline(red_hits: np.ndarray) -> pd.DataFrame:
 
 def _result(red_hits) -> BacktestResult:
     metrics = Metrics(
-        mean_red_hits=float(np.mean(red_hits)) if len(red_hits) else 0.0,
-        mean_blue_hits=0.0,
+        mean_max_red_hits=float(np.mean(red_hits)) if len(red_hits) else 0.0,
+        mean_red_hits_per_ticket=float(np.mean(red_hits)) if len(red_hits) else 0.0,
+        mean_blue_hits_per_ticket=0.0,
         hit_rate=0.0,
-        expected_hits=1.0,
+        expected_red_hits_per_ticket=1.0,
+        expected_red_hits_per_period=1.0,
         max_gap_periods=0,
         max_drawdown=0.0,
         total_cost=0.0,
         total_return=0.0,
+        roi=0.0,
+        roi_ci_low=0.0,
+        roi_ci_high=0.0,
     )
     return BacktestResult(
         metrics=metrics,
@@ -43,6 +48,7 @@ def test_identical_distribution_is_not_significant():
     outcome = SignificanceTester().compare(_result(observed), baseline)
     assert not outcome.is_significant
     assert outcome.p_value > 0.05
+    assert 0.0 <= outcome.effect_size <= 1.0
     assert outcome.conclusion.startswith("策略与随机选号无统计显著差异")
 
 
@@ -51,6 +57,7 @@ def test_shifted_distribution_is_significant():
     outcome = SignificanceTester().compare(_result([6] * 200), baseline)
     assert outcome.is_significant
     assert outcome.p_value < 0.05
+    assert outcome.effect_size > 0.5
     assert "存在统计显著差异" in outcome.conclusion
 
 

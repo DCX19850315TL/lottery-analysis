@@ -362,14 +362,19 @@ class TeachingPipeline:
 ```python
 @dataclass(frozen=True)
 class Metrics:
-    mean_red_hits: float
-    mean_blue_hits: float
+    mean_max_red_hits: float              # 每期最佳单注红球命中
+    mean_red_hits_per_ticket: float       # 单注平均红球命中
+    mean_blue_hits_per_ticket: float
     hit_rate: float
-    expected_hits: float
+    expected_red_hits_per_ticket: float
+    expected_red_hits_per_period: float
     max_gap_periods: int
     max_drawdown: float
     total_cost: float
     total_return: float
+    roi: float
+    roi_ci_low: float
+    roi_ci_high: float
 
 class TeachingBacktestEngine:
     def run(self, draws: Sequence[DrawRecord], model_name: str,
@@ -380,6 +385,11 @@ class MathBacktestEngine:
             test_periods: int) -> BacktestResult: ...
     # 关键约束：plan 在进入本函数前已生成完毕，函数内不得调用任何 theory 生成器
 
+class DltBacktestEngine:
+    def run(self, draws: Sequence[SportsDraw],
+            options: DltBacktestOptions) -> DltBacktestResult: ...
+    # 大乐透滚动回测：前区/后区命中分别报告，训练窗口严格截止到被预测期之前
+
 class MonteCarloBaseline:
     def run(self, draws: Sequence[DrawRecord], n_trials: int,
             seed: int) -> pd.DataFrame: ...      # 每次 trial 为纯随机购票
@@ -387,7 +397,7 @@ class MonteCarloBaseline:
 class SignificanceTester:
     def compare(self, strategy: BacktestResult,
                 baseline: pd.DataFrame) -> SignificanceResult: ...
-    # SignificanceResult(chi2, p_value, is_significant, conclusion: str)
+    # SignificanceResult(chi2, p_value, effect_size, is_significant, conclusion: str)
 ```
 
 关键实现思路：

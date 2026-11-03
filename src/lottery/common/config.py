@@ -166,6 +166,7 @@ class RecommendConfig(BaseModel):
     window: int
     pool_size: int
     ticket_count: int
+    dlt_back_pool_size: int
     freq_weight: float
     omission_weight: float
 

@@ -30,7 +30,7 @@ def _frame() -> pd.DataFrame:
 def seeded_csv(tmp_path, monkeypatch):
     path = tmp_path / "dlt_history.csv"
     SportsStorage(path).rewrite(_frame())
-    monkeypatch.setattr("lottery.cli.dlt_recommend._storage_path", lambda _cfg: path)
+    monkeypatch.setattr("lottery.cli.dlt_data.storage_path", lambda _cfg: path)
     return path
 
 
@@ -45,14 +45,14 @@ def test_offline_recommend_prints_count_and_tickets(seeded_csv, capsys):
 
 def test_missing_csv_offline_fails(monkeypatch, tmp_path, capsys):
     missing = tmp_path / "none.csv"
-    monkeypatch.setattr("lottery.cli.dlt_recommend._storage_path", lambda _cfg: missing)
+    monkeypatch.setattr("lottery.cli.dlt_data.storage_path", lambda _cfg: missing)
     assert main(["--offline"]) == 1
     assert "没有可用历史数据" in capsys.readouterr().err
 
 
 def test_refresh_failure_reports_clean_error(monkeypatch, tmp_path, capsys):
     missing = tmp_path / "none.csv"
-    monkeypatch.setattr("lottery.cli.dlt_recommend._storage_path", lambda _cfg: missing)
+    monkeypatch.setattr("lottery.cli.dlt_data.storage_path", lambda _cfg: missing)
 
     class FailingCrawler:
         def __init__(self, _cfg):
@@ -61,7 +61,7 @@ def test_refresh_failure_reports_clean_error(monkeypatch, tmp_path, capsys):
         def fetch_all(self, _game_no):
             raise CrawlError("接口不可用")
 
-    monkeypatch.setattr("lottery.cli.dlt_recommend.SportteryCrawler", FailingCrawler)
+    monkeypatch.setattr("lottery.cli.dlt_data.SportteryCrawler", FailingCrawler)
     assert main([]) == 1
     err = capsys.readouterr().err
     assert "数据加载失败" in err
@@ -72,7 +72,7 @@ def test_refresh_failure_reports_clean_error(monkeypatch, tmp_path, capsys):
 def test_corrupt_csv_reports_single_line_error(monkeypatch, tmp_path, capsys):
     path = tmp_path / "dlt_history.csv"
     path.write_text("issue,draw_date,numbers\n26001,2026-01-01,1 2 3\n", encoding="utf-8")
-    monkeypatch.setattr("lottery.cli.dlt_recommend._storage_path", lambda _cfg: path)
+    monkeypatch.setattr("lottery.cli.dlt_data.storage_path", lambda _cfg: path)
     assert main(["--offline"]) == 1
     err = capsys.readouterr().err
     assert err.startswith("数据加载失败: ")
@@ -88,6 +88,7 @@ def test_corrupt_csv_reports_single_line_error(monkeypatch, tmp_path, capsys):
         ["--back-pool", "1"],
         ["--back-pool", "13"],
         ["--window", "0"],
+        ["--count", "2", "--front-pool", "5", "--back-pool", "2"],
     ],
 )
 def test_invalid_args_rejected(argv, capsys):
