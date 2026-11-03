@@ -63,10 +63,28 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.theory_report --pool-size
 PYTHONPATH=src .venv\Scripts\python.exe -m streamlit run src/lottery/ui/app.py
 ```
 
+体彩历史数据（大乐透 / 排列3 / 排列5，来源体彩官网接口）：
+
+```bash
+# 拉取全部三个玩法
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.sports_history
+
+# 只拉取一个玩法：dlt | pl3 | pl5
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.sports_history --game dlt
+```
+
+每次运行按官方分页抓取全量记录，按期号幂等追加并排序，重复运行不会产生重复行。输出每个玩法的拉取期数、新增期数与最新一期。
+
 ## 数据位置
 
-历史开奖数据存放在 `data/raw/ssq_history.csv`。
+双色球历史开奖数据存放在 `data/raw/ssq_history.csv`，由 `config/config.yaml` 的 `paths.raw_csv` 指定。
 
-- 该路径由 `config/config.yaml` 的 `paths.raw_csv` 指定。
-- 默认运行在本地无数据时会自动采集；`--refresh` 会联网更新此文件；`--offline` 只读取此文件。
-- 该目录已被 `.gitignore` 忽略，仓库不提交任何抓取数据。
+体彩历史数据按玩法存放：
+
+- `data/raw/dlt_history.csv`（超级大乐透）
+- `data/raw/pl3_history.csv`（排列3）
+- `data/raw/pl5_history.csv`（排列5）
+
+体彩 CSV 列为 `issue,draw_date,numbers`，`numbers` 按官方开奖顺序以空格分隔（大乐透 7 个、排列3 3 个、排列5 5 个）。路径与官方 gameNo 由 `config/config.yaml` 的 `sporttery.games` 配置。
+
+双色球默认运行在本地无数据时会自动采集；`--refresh` 会联网更新此文件；`--offline` 只读取此文件。`data/raw` 已被 `.gitignore` 忽略，仓库不提交任何抓取数据。

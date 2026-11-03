@@ -84,6 +84,33 @@ class CrawlerConfig(BaseModel):
     retry: RetryConfig
 
 
+class SportsGameConfig(BaseModel):
+    """单个体彩玩法：名称、官方 gameNo 与本地 CSV 路径。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str
+    game_no: str
+    raw_csv: str
+
+
+class SportteryConfig(BaseModel):
+    """体彩官方接口参数：地址、分页、限速、重试与玩法列表。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    api_url: str
+    home_url: str
+    page_size: int
+    timeout_s: float
+    max_pages: int
+    rate_limit_qps: float
+    user_agent: str
+    accept_language: str
+    retry: RetryConfig
+    games: dict[str, SportsGameConfig]
+
+
 class RandomnessConfig(BaseModel):
     """随机性检验参数：显著性水平、校正方式、启用检验与随机种子。"""
 
@@ -152,6 +179,7 @@ class AppConfig(BaseModel):
     paths: PathsConfig
     lottery: LotteryConfig
     crawler: CrawlerConfig
+    sporttery: SportteryConfig
     randomness: RandomnessConfig
     math: MathConfig
     backtest: BacktestConfig

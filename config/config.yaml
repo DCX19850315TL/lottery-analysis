@@ -57,6 +57,32 @@ crawler:
     max_attempts: 5
     backoff_s: 2.0
 
+sporttery:                          # 体育彩票官方接口（大乐透 / 排列3 / 排列5）
+  api_url: "https://webapi.sporttery.cn/gateway/lottery/getHistoryPageListV1.qry"
+  home_url: "https://www.sporttery.cn/"
+  page_size: 100
+  timeout_s: 20
+  max_pages: 100
+  rate_limit_qps: 1.0
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+  accept_language: "zh-CN,zh;q=0.9"
+  retry:
+    max_attempts: 3
+    backoff_s: 2.0
+  games:
+    dlt:
+      name: "超级大乐透"
+      game_no: "85"
+      raw_csv: "data/raw/dlt_history.csv"
+    pl3:
+      name: "排列3"
+      game_no: "35"
+      raw_csv: "data/raw/pl3_history.csv"
+    pl5:
+      name: "排列5"
+      game_no: "350133"
+      raw_csv: "data/raw/pl5_history.csv"
+
 randomness:
   alpha: 0.05
   correction: bonferroni          # bonferroni | none

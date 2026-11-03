@@ -52,6 +52,15 @@ def test_loads_prize_amounts():
     assert prizes.sixth == 5.0
 
 
+def test_loads_sporttery_section():
+    cfg = get_config()
+    assert cfg.sporttery.api_url.startswith("https://webapi.sporttery.cn/")
+    assert cfg.sporttery.games["dlt"].game_no == "85"
+    assert cfg.sporttery.games["pl3"].game_no == "35"
+    assert cfg.sporttery.games["pl5"].game_no == "350133"
+    assert cfg.sporttery.games["dlt"].raw_csv.endswith("dlt_history.csv")
+
+
 def test_loads_money_section():
     cfg = get_config()
     assert cfg.money.total_budget == 2000.0
