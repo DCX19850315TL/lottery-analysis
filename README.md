@@ -4,7 +4,7 @@
 
 ## 风险声明
 
-风险提示：本系统为历史数据统计与算法教学演示系统。双色球每期开奖为独立随机事件，历史结果与未来开奖无因果关系。所有 AI/ML 模型仅做历史数据拟合，无法提升中奖概率；覆盖设计仅改善已命中情形下的奖金回收结构，不改变彩票负期望收益本质。
+风险提示：本系统为历史数据统计与算法教学演示系统。彩票每期开奖为独立随机事件，历史结果与未来开奖无因果关系。所有 AI/ML 模型仅做历史数据拟合，无法提升中奖概率；覆盖设计仅改善已命中情形下的奖金回收结构，不改变彩票负期望收益本质。
 
 本系统仅用于教学演示，不构成任何投注建议。
 
@@ -39,6 +39,18 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.recommend --count 5 --ref
 首次运行无需额外参数：本地 CSV 不存在或为空时会自动联网全量采集。本地已有数据时默认直接读取；`--refresh` 强制联网更新（已有数据时只补抓新期号）；`--offline` 禁止一切网络，本地无数据时直接报错退出。
 
 输出首先打印风险横幅，随后是最新期号、历史期数与推荐号码。
+
+大乐透推荐（体彩，读取 `data/raw/dlt_history.csv`）：
+
+```bash
+# 首次运行：本地无数据时自动全量采集，然后生成推荐
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.dlt_recommend --count 5
+
+# 强制联网更新历史数据后再生成推荐
+PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.dlt_recommend --count 5 --refresh
+```
+
+输出风险横幅、玩法名、最新期号、历史期数、注数，以及每注前区 5 个号码与后区 2 个号码。`--front-pool`、`--back-pool`、`--window`、`--seed` 覆盖候选池大小、统计窗口与随机种子；默认前区池 12、后区池 6，其余默认值来自 `config/config.yaml`。`--offline` 与双色球推荐含义相同。
 
 理论路线（全程不读取历史数据）：
 
@@ -87,4 +99,4 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.sports_history --game dlt
 
 体彩 CSV 列为 `issue,draw_date,numbers`，`numbers` 按官方开奖顺序以空格分隔（大乐透 7 个、排列3 3 个、排列5 5 个）。路径与官方 gameNo 由 `config/config.yaml` 的 `sporttery.games` 配置。
 
-双色球默认运行在本地无数据时会自动采集；`--refresh` 会联网更新此文件；`--offline` 只读取此文件。`data/raw` 已被 `.gitignore` 忽略，仓库不提交任何抓取数据。
+双色球与大乐透推荐默认在本地无数据时会自动采集；`--refresh` 会联网更新对应 CSV；`--offline` 只读取本地文件。`data/raw` 已被 `.gitignore` 忽略，仓库不提交任何抓取数据。
