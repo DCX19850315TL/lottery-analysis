@@ -29,6 +29,8 @@ torch==2.3.1
 # ---- 界面 ----
 streamlit==1.37.1
 plotly==5.23.0
+# 锁定 17.x：pyarrow 26 要求 numpy>=2，与本项目 numpy==1.26.4 冲突
+pyarrow==17.0.0
 
 # ---- 配置 ----
 PyYAML==6.0.1

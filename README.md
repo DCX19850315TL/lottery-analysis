@@ -57,6 +57,12 @@ PYTHONPATH=src .venv\Scripts\python.exe -m lottery.cli.theory_report --pool-size
 
 随机种子在 `config/config.yaml` 的 `project.random_seed` 中固定。同一份历史数据、同一组参数下，重复运行输出的号码完全一致。
 
+图形界面（Streamlit，包含教学、数学、数据管理与随机性检验四个页面）：
+
+```bash
+PYTHONPATH=src .venv\Scripts\python.exe -m streamlit run src/lottery/ui/app.py
+```
+
 ## 数据位置
 
 历史开奖数据存放在 `data/raw/ssq_history.csv`。
