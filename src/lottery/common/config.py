@@ -33,8 +33,21 @@ class PathsConfig(BaseModel):
     coverage_table: Path
 
 
+class PrizeConfig(BaseModel):
+    """六个奖级的名义奖金（元）；一、二等奖为浮动奖金的名义值。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    first: float
+    second: float
+    third: float
+    fourth: float
+    fifth: float
+    sixth: float
+
+
 class LotteryConfig(BaseModel):
-    """双色球号码范围、每注红球数与单注价格。"""
+    """双色球号码范围、每注红球数、单注价格与奖级奖金。"""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -44,6 +57,7 @@ class LotteryConfig(BaseModel):
     blue_min: int
     blue_max: int
     ticket_price: float
+    prizes: PrizeConfig
 
 
 class RetryConfig(BaseModel):

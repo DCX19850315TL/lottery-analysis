@@ -42,6 +42,16 @@ def test_loads_backtest_section():
     assert cfg.backtest.monte_carlo_trials == 1000
 
 
+def test_loads_prize_amounts():
+    prizes = get_config().lottery.prizes
+    assert prizes.first == 5_000_000.0
+    assert prizes.second == 100_000.0
+    assert prizes.third == 3_000.0
+    assert prizes.fourth == 200.0
+    assert prizes.fifth == 10.0
+    assert prizes.sixth == 5.0
+
+
 def test_loads_money_section():
     cfg = get_config()
     assert cfg.money.total_budget == 2000.0

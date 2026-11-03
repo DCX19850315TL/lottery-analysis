@@ -37,6 +37,13 @@ lottery:
   blue_min: 1
   blue_max: 16
   ticket_price: 2.0
+  prizes:                           # 名义奖金（元）；一、二等奖为浮动奖金的名义值
+    first: 5000000.0
+    second: 100000.0
+    third: 3000.0
+    fourth: 200.0
+    fifth: 10.0
+    sixth: 5.0
 
 crawler:
   base_url: "https://www.cwl.gov.cn/ygkj/wqkjgg/"
